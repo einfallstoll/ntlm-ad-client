@@ -1,18 +1,18 @@
-[![NPM version](https://img.shields.io/npm/v/ntlm-ad-proxy.svg?style=flat)](https://www.npmjs.com/package/ntlm-ad-proxy)
+[![NPM version](https://img.shields.io/npm/v/ntlm-ad-client.svg?style=flat)](https://www.npmjs.com/package/ntlm-ad-client)
 
-# ntlm-ad-proxy
+# ntlm-ad-client
 
 A simple NTLM Client to negotiate and authenticate against an Active Directory.
 
-*`ntlm-ad-proxy` is heavily inspired by [PyAuthenNTLM2](https://github.com/Legrandin/PyAuthenNTLM2/). Also a thanks to [Alessandro Mancini](https://github.com/mancioshell) for separating and refactoring the main part of this module from its originating repository [`express-ntlm`](https://github.com/einfallstoll/express-ntlm)*
+*`ntlm-ad-client` is heavily inspired by [PyAuthenNTLM2](https://github.com/Legrandin/PyAuthenNTLM2/). Also a thanks to [Alessandro Mancini](https://github.com/mancioshell) for separating and refactoring the main part of this module from its originating repository [`express-ntlm`](https://github.com/einfallstoll/express-ntlm)*
 
 ## install
 
-    $ npm install ntlm-ad-proxy
+    $ npm install ntlm-ad-client
 
 ## example usage
 
-	const ntlm_client = require('./')
+	const ntlm_client = require('ntlm-ad-client')
 
 	const MESSAGE_NTLM_1 = 'MESSAGE_NTLM_1';
 	const MESSAGE_NTLM_3 = 'MESSAGE_NTLM_3'

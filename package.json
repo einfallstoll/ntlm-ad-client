@@ -1,5 +1,5 @@
 {
-  "name": "ntlm-ad-proxy",
+  "name": "ntlm-ad-client",
   "version": "2.3.0",
   "description": "A simple NTLM client for Active Directories",
   "main": "index.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/einfallstoll/ntlm-ad-proxy"
+    "url": "git://github.com/einfallstoll/ntlm-ad-client"
   },
   "keywords": [
     "express",
@@ -19,7 +19,7 @@
   "author": "Fabio Poloni \"fabio@APP-roved.com\" (http://APP-roved.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/einfallstoll/ntlm-ad-proxy/issues"
+    "url": "https://github.com/einfallstoll/ntlm-ad-client/issues"
   },
-  "homepage": "https://github.com/einfallstoll/ntlm-ad-proxy"
+  "homepage": "https://github.com/einfallstoll/ntlm-ad-client"
 }
