@@ -1,120 +1,53 @@
-[![NPM version](https://img.shields.io/npm/v/express-ntlm.svg?style=flat)](https://www.npmjs.com/package/express-ntlm)
+[![NPM version](https://img.shields.io/npm/v/ntlm-ad-proxy.svg?style=flat)](https://www.npmjs.com/package/ntlm-ad-proxy)
 
-# express-ntlm
+# ntlm-ad-proxy
 
-An express middleware to have basic NTLM-authentication in node.js.
+A simple NTLM Client to negotiate and authenticate against an Active Directory.
 
-> **Upgrading from 1.0:** The fields for username, domain and workstation have different names now: `UserName`, `DomainName`, `Workstation`.
-
-*Active Directory support is heavily inspired by [PyAuthenNTLM2](https://github.com/Legrandin/PyAuthenNTLM2/).*
-
-## important notes on (reverse) proxies and NTLM
-
-NTLM is designed for corporate networks without a proxy between the client and the application. It does authorise the TCP connection instead of the HTTP session and with a proxy between, it'll authorise the connection between the proxy and the application and therefore mixing up users if the proxy shares the same connection or "forgetting" users if the proxy suddenly uses a different connection for the same user.
-
-In an early state of this module `express-ntlm` tried to create a session during the negotiation, which failed (see [`50d9ac4`](https://github.com/einfallstoll/express-ntlm/commit/50d9ac4a06552ab39d49eadf9efe68f02d122176)) even though [RFC6265](https://tools.ietf.org/html/rfc6265#section-3) makes it clear it MUST be possible: "User agents [...] MUST process Set-Cookie headers contained in other responses (including responses with 400- and 500-level status codes)."
-
-A possible solution to this problem might be to set the `keep-alive` property in nginx as mentioned in an [answer from StackOverflow regarding this issue](http://stackoverflow.com/a/22918442/377369) but it could end in the "multiple-users same-connection"-problem [mentioned from another user](http://stackoverflow.com/a/22806907/377369).
-
-Another option would be to abandon the proxy completely and connect directly to the application on port 80 or build a custom reverse proxy that authenticates the user, creates a session and keeps the session data on a shared store, that is accessible by all applications behind the proxy (e.g. [expressjs/session](https://github.com/expressjs/session) in combination with [visionmedia/connect-redis](http://github.com/visionmedia/connect-redis)).
+*`ntlm-ad-proxy` is heavily inspired by [PyAuthenNTLM2](https://github.com/Legrandin/PyAuthenNTLM2/). Also a thanks to [Alessandro Mancini](https://github.com/mancioshell) for separating and refactoring the main part of this module from its originating repository [`express-ntlm`](https://github.com/einfallstoll/express-ntlm)*
 
 ## install
 
-    $ npm install express-ntlm
+    $ npm install ntlm-ad-proxy
 
 ## example usage
 
-    var express = require('express'),
-        ntlm = require('express-ntlm');
+	const ntlm_client = require('./')
 
-    var app = express();
+	const MESSAGE_NTLM_1 = 'MESSAGE_NTLM_1';
+	const MESSAGE_NTLM_3 = 'MESSAGE_NTLM_3'
+	const HOSTNAME = 'YOUR_HOSTNAME'
+	const PORT = 'YOUR_PORT'
+	const DOMAIN = 'YOUR_DOMAIN'
 
-    app.use(ntlm({
-        debug: function() {
-            var args = Array.prototype.slice.apply(arguments);
-            console.log.apply(null, args);
-        },
-        domain: 'MYDOMAIN',
-        domaincontroller: 'ldap://myad.example',
+	const client = ntlm_client({
+	    hostname: HOSTNAME,
+	    port: PORT,
+	    domain: DOMAIN,
+	    path: null,
+	    use_tls: false,
+	    tls_options: undefined
+	})
 
-        // use different port (default: 389)
-        // domaincontroller: 'ldap://myad.example:3899',
-    }));
+	client.negotiate(MESSAGE_NTLM_1, (err, challenge) => {
+	    if (err) throw new Error(err);
+	    console.log(challenge);
 
-    app.all('*', function(request, response) {
-        response.end(JSON.stringify(request.ntlm)); // {"DomainName":"MYDOMAIN","UserName":"MYUSER","Workstation":"MYWORKSTATION"}
-    });
-
-    app.listen(80);
-
-
-## example with ldaps
-
-    var express = require('express'),
-        ntlm = require('express-ntlm'),
-        fs = require('fs');
-
-    var app = express();
-
-    app.use(ntlm({
-        debug: function() {
-            var args = Array.prototype.slice.apply(arguments);
-            console.log.apply(null, args);
-        },
-        domain: 'MYDOMAIN',
-        domaincontroller: 'ldaps://myad.example',
-        tlsOptions: {
-            //trusted certificate authorities (can be extracted from the server with openssh)
-            ca: fs.readFileSync('./ca.pem'),
-            //tells the tls module not to check the server's certificate (do not use in production)
-            //rejectUnauthorized: false,
-        }
-    }));
-
-    //same as above
-    app.all('*', function(request, response) {
-        response.end(JSON.stringify(request.ntlm)); // {"DomainName":"MYDOMAIN","UserName":"MYUSER","Workstation":"MYWORKSTATION"}
-    });
-
-    app.listen(80);
-
-### without validation
-
-It's not recommended, but it's possible to add NTLM-Authentication without validation. This means you can authenticate without providing valid credentials.
-
-    app.use(ntlm());
+	    client.authenticate(MESSAGE_NTLM_3, (err, result) => {
+		if (err) throw new Error(err);
+		console.log(result); // // {"DomainName":"MYDOMAIN","UserName":"MYUSER","Workstation":"MYWORKSTATION"}
+	    })
+	})
 
 ## options
 
 | Name | type | default | description |
 |------|------|---------|-------------|
-| `badrequest` | `function` | `function(request, response, next) { response.sendStatus(400); }` | Function to handle HTTP 400 Bad Request. |
-| `internalservererror` | `function` | `function(request, response, next) { response.sendStatus(500); }` | Function to handle HTTP 500 Internal Server Error. |
-| `forbidden` | `function` | `function(request, response, next) { response.sendStatus(403); }` | Function to handle HTTP 403 Forbidden. |
-| `prefix` | `string` | `[express-ntlm]` | The prefix is the first argument passed to the `debug`-function. |
-| `debug` | `function` | `function() {}` | Function to log the debug messages. See [logging](#logging) for more details. |
-| `domain` | `string` | `undefined` | Default domain if the DomainName-field cannot be parsed. |
-| `domaincontroller` | `null` / `string` / `array` | `null` | One or more domaincontroller(s) to handle the authentication. If `null` is specified the user is not validated. Active Directory is supported. |
-| `tlsOptions` | `object` | `undefined` | An options object that will be passed to [tls.connect](https://nodejs.org/api/tls.html#tls_tls_connect_options_callback) and [tls.createSecureContext](https://nodejs.org/api/tls.html#tls_tls_createsecurecontext_options). __Only required when using ldaps and the server's certificate is signed by a certificate authority not in Node's default list of CAs.__ (or use [NODE_EXTRA_CA_CERTS](https://nodejs.org/api/cli.html#cli_node_extra_ca_certs_file) environment variable)|
-| `tlsOptions.ca` | `string` /  `array` / `Buffer` | `undefined` | Override the trusted CA certificates provided by Node. Refer to [tls.createSecureContext](https://nodejs.org/api/tls.html#tls_tls_createsecurecontext_options) |
+| `hostname` | `string` | Hostname of the Active Directory. |
+| `port` | `string` | Port of the Active Directory. |
+| `domain` | `string` | Default domain if the DomainName-field cannot be parsed. |
+| `path` | `string` | Base DN. *not implemented yet* |
+| `use_tls` | `boolean` | Indicates wether to use TLS or not. |
+| `tls_options` | `object` | An options object that will be passed to [tls.connect](https://nodejs.org/api/tls.html#tls_tls_connect_options_callback) and [tls.createSecureContext](https://nodejs.org/api/tls.html#tls_tls_createsecurecontext_options). __Only required when using ldaps and the server's certificate is signed by a certificate authority not in Node's default list of CAs.__ (or use [NODE_EXTRA_CA_CERTS](https://nodejs.org/api/cli.html#cli_node_extra_ca_certs_file) environment variable)|
+| `tls_options.ca` | `string` /  `array` / `Buffer` | `undefined` | Override the trusted CA certificates provided by Node. Refer to [tls.createSecureContext](https://nodejs.org/api/tls.html#tls_tls_createsecurecontext_options) |
 
-## logging (examples)
-<a name="logging" />
-
-### simple debugging to the console
-
-    function() {
-        var args = Array.prototype.slice.apply(arguments);
-        console.log.apply(null, args);
-    }
-
-### logging to [debug](https://github.com/visionmedia/debug) (or similiar logging-utilities)
-
-    function() {
-        var args = Array.prototype.slice.apply(arguments);
-        debug.apply(null, args.slice(1)); // slice the prefix away, since debug is already prefixed
-    }
-
-### notes
-
-All NTLM-fields (`UserName`, `DomainName`, `Workstation`) are also available within `response.locals.ntlm`, which means you can access it through your template engine (e.g. jade or ejs) while rendering (e.g. `<%= ntlm.UserName %>`).
